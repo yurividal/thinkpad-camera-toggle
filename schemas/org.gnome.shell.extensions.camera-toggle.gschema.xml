@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.camera-toggle" path="/org/gnome/shell/extensions/camera-toggle/" gettext-domain="gnome-shell-extensions">
+    <key type="i" name="widget-width">
+      <default>1</default>
+      <summary>Widget width in Quick Settings</summary>
+      <description>Width of the camera toggle widget in Quick Settings columns (1 or 2)</description>
+    </key>
+  </schema>
+</schemalist>

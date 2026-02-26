@@ -1,0 +1,9 @@
+{
+  "description": "Toggle camera on/off directly from GNOME Shell Quick Settings. Easily control your camera driver with a single click.",
+  "name": "Camera Toggle",
+  "settings-schema": "org.gnome.shell.extensions.camera-toggle",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "url": "https://github.com/yurividal/thinkpad-camera-toggle",
+  "uuid": "camera-toggle@yurividal.dev",
+  "version": 1
+}
