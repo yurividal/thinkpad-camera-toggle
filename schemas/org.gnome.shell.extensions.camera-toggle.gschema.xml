@@ -6,5 +6,10 @@
       <summary>Widget width in Quick Settings</summary>
       <description>Width of the camera toggle widget in Quick Settings columns (1 or 2)</description>
     </key>
+    <key type="b" name="show-osd-notification">
+      <default>true</default>
+      <summary>Show on-screen notification on toggle</summary>
+      <description>Display a brief on-screen overlay when the camera is toggled on or off</description>
+    </key>
   </schema>
 </schemalist>

@@ -24,6 +24,16 @@ export default class CameraTogglePreferences extends ExtensionPreferences {
         appearanceGroup.add(this._createWidthRow(settings));
         
         page.add(appearanceGroup);
+        
+        // Behavior settings group
+        const behaviorGroup = new Adw.PreferencesGroup({
+            title: 'Behavior',
+            description: 'Configure how Camera Toggle behaves when activated'
+        });
+        
+        behaviorGroup.add(this._createOSDRow(settings));
+        
+        page.add(behaviorGroup);
         window.add(page);
     }
     
@@ -50,5 +60,21 @@ export default class CameraTogglePreferences extends ExtensionPreferences {
         
         widthRow.add_suffix(widthDropdown);
         return widthRow;
+    }
+    
+    _createOSDRow(settings) {
+        const osdRow = new Adw.SwitchRow({
+            title: 'Show on-screen notification',
+            subtitle: 'Display a brief overlay when the camera is toggled on or off'
+        });
+        
+        settings.bind(
+            'show-osd-notification',
+            osdRow,
+            'active',
+            Gio.SettingsBindFlags.DEFAULT
+        );
+        
+        return osdRow;
     }
 }

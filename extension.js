@@ -11,7 +11,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 // Camera Toggle for Quick Settings
 const CameraToggle = GObject.registerClass(
     class CameraToggle extends QuickSettings.QuickToggle {
-        _init(extensionPath) {
+        _init(extensionPath, settings, onStateChanged) {
             super._init({
                 title: 'Camera',
                 iconName: 'camera-web-symbolic',
@@ -19,6 +19,8 @@ const CameraToggle = GObject.registerClass(
             });
             
             this._extensionPath = extensionPath;
+            this._settings = settings;
+            this._onStateChangedCb = onStateChanged;
             this.cameraOnScript = GLib.build_filenamev([extensionPath, 'camera-on.sh']);
             this.cameraOffScript = GLib.build_filenamev([extensionPath, 'camera-off.sh']);
             
@@ -29,28 +31,40 @@ const CameraToggle = GObject.registerClass(
             this._checkCameraState();
         }
         
+        _updateState(isOn) {
+            this.checked = isOn;
+            this.subtitle = isOn ? 'Active' : 'Inactive';
+            if (this._onStateChangedCb)
+                this._onStateChangedCb(isOn);
+        }
+        
+        _showOSD(isOn) {
+            if (!this._settings.get_boolean('show-osd-notification'))
+                return;
+            const iconName = isOn ? 'camera-web-symbolic' : 'camera-disabled-symbolic';
+            const icon = new Gio.ThemedIcon({ name: iconName });
+            Main.osdWindowManager.show(icon, isOn ? 'Camera On' : 'Camera Off', -1);
+        }
+        
         _checkCameraState() {
-            // Check if camera pipeline is running
+            // Check if camera pipeline is running by using pgrep directly.
+            // Avoids the self-match bug that occurs when embedding the pattern
+            // inside a 'bash -c' string (bash's own cmdline contains the pattern).
             try {
                 const proc = Gio.Subprocess.new(
-                    ['bash', '-c', 'pgrep -f "gst-launch.*icamerasrc" >/dev/null 2>&1 && echo on || echo off'],
-                    Gio.SubprocessFlags.STDOUT_PIPE
+                    ['pgrep', '-f', 'gst-launch-1.0 icamerasrc'],
+                    Gio.SubprocessFlags.NONE
                 );
                 
                 proc.wait_async(null, (source, result) => {
                     try {
                         source.wait_finish(result);
-                        const stdout = proc.get_stdout_pipe();
-                        const reader = new Gio.DataInputStream({ base_stream: stdout });
-                        const [line] = reader.read_line(null);
-                        
-                        if (line) {
-                            const output = new TextDecoder().decode(line).trim();
-                            this.set_active(output === 'on');
-                        }
+                        // pgrep exits 0 when a match is found, 1 when not
+                        const isOn = source.get_exit_status() === 0;
+                        this._updateState(isOn);
                     } catch (e) {
                         log(`Camera Toggle: Error checking state: ${e}`);
-                        this.set_active(false);
+                        this._updateState(false);
                     }
                 });
             } catch (e) {
@@ -64,6 +78,7 @@ const CameraToggle = GObject.registerClass(
             
             log(`Camera Toggle: Toggling camera ${isActive ? 'ON' : 'OFF'}`);
             
+            this._showOSD(isActive);
             this._executeScript(script);
         }
         
@@ -111,11 +126,24 @@ const CameraToggle = GObject.registerClass(
 // System Indicator for Quick Settings
 const CameraSystemIndicator = GObject.registerClass(
     class CameraSystemIndicator extends QuickSettings.SystemIndicator {
-        _init(extensionPath) {
+        _init(extensionPath, settings) {
             super._init();
             
-            this._toggle = new CameraToggle(extensionPath);
+            // Panel icon — visible when camera is active
+            this._panelIcon = this._addIndicator();
+            this._panelIcon.iconName = 'camera-web-symbolic';
+            this._panelIcon.visible = false;
+            
+            this._toggle = new CameraToggle(
+                extensionPath,
+                settings,
+                this._onCameraStateChanged.bind(this)
+            );
             this.quickSettingsItems.push(this._toggle);
+        }
+        
+        _onCameraStateChanged(isOn) {
+            this._panelIcon.visible = isOn;
         }
         
         destroy() {
@@ -136,10 +164,11 @@ export default class CameraToggleExtension extends Extension {
     
     enable() {
         this._settings = this.getSettings();
-        this._indicator = new CameraSystemIndicator(this.path);
+        this._indicator = new CameraSystemIndicator(this.path, this._settings);
         
         // Add to Quick Settings
         Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
+        this._applyWidgetWidth();
         
         // Listen for width changes
         this._widthChangedId = this._settings.connect('changed::widget-width', () => {
@@ -147,11 +176,24 @@ export default class CameraToggleExtension extends Extension {
         });
     }
     
+    _applyWidgetWidth() {
+        if (this._settings.get_int('widget-width') !== 2)
+            return;
+        try {
+            const grid = Main.panel.statusArea.quickSettings._grid;
+            const toggle = this._indicator._toggle;
+            grid.layout_manager.child_set_property(grid, toggle, 'column-span', 2);
+        } catch (e) {
+            log(`Camera Toggle: Could not apply 2-column width: ${e}`);
+        }
+    }
+    
     _recreateIndicator() {
         if (this._indicator) {
             this._indicator.destroy();
-            this._indicator = new CameraSystemIndicator(this.path);
+            this._indicator = new CameraSystemIndicator(this.path, this._settings);
             Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
+            this._applyWidgetWidth();
         }
     }
     
