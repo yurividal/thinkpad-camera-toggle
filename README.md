@@ -69,13 +69,6 @@ gnome-extensions enable camera-toggle@yurividal.dev
 
 Or use the **GNOME Extensions** app.
 
-> **Upgrading from an older UUID?** If you had `camera-toggle@mahaon.dev` installed, disable it first:
->
-> ```bash
-> gnome-extensions disable camera-toggle@mahaon.dev
-> ```
-> Then log out/in and enable the new UUID as above.
-
 ---
 
 ## How the Scripts Work
