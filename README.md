@@ -14,9 +14,9 @@ Modern ThinkPad models (e.g. X1 Carbon Gen 10+) ship with an **Intel MIPI camera
 
 Lenovo ships a pre-built, kernel-signed driver that only works with **specific signed Ubuntu versions**. When you adapt or recompile the driver to work with other Ubuntu/kernel versions, the camera becomes functional — but with an important quirk:
 
-> **The camera LED stays on as long as any process is running the `icamerasrc` GStreamer pipeline.** There is no simple `modprobe`/`rmmod` toggle once the pipeline is live.
+> **The camera LED stays on as long as the `icamerasrc` GStreamer pipeline is running.** There is no simple `modprobe`/`rmmod` toggle once the pipeline is live.
 
-This means that if any app (or background process) starts the camera and doesn't cleanly stop it, the **LED stays on permanently** — giving the user no reliable indication of whether they are actually being recorded.
+Crucially, apps cannot start or even see the camera on their own — **no `/dev/video*` device exists until `camera-on.sh` is run manually.** Once the pipeline is started, the LED stays on until `camera-off.sh` is explicitly called. Without a convenient toggle, the user would have to drop into a terminal and kill the process by hand every time.
 
 This extension solves that by:
 
